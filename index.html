@@ -58,6 +58,7 @@ nav .fab{width:56px;height:56px;border-radius:50%;background:var(--acc);color:va
   <button data-t="set"><span>⚙️</span>إعدادات</button>
 </nav>
 <div id="sh"></div>
+<script src="firebase-config.js"></script>
 <script>
 const KEY='exp1',PAL=['#1b7f5c','#2f80c9','#e0a526','#c4472f','#7a5bc9','#16a0a8','#d9638c','#8a9a2b','#e07a2f','#5a6b78','#3a9d3a','#b0623f'];
 const DC=[['مياه','💧'],['كهرباء','⚡'],['بقالة','🛒'],['غاز','🔥'],['إنترنت وموبايل','📱'],['مواصلات','🚗'],['إيجار','🏠'],['صحة','💊'],['تعليم','📚'],['مطاعم','🍽️'],['ملابس','👕'],['ترفيه','🎬'],['أخرى','📦']];
@@ -83,7 +84,7 @@ const byCat=l=>{const m={};l.forEach(t=>{m[t.c]=m[t.c]||{id:t.c,t:0,k:0};m[t.c].
 const dl=(name,txt,type)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
 let tab='home',mon=TD().slice(0,7),rep={from:TD().slice(0,8)+'01',to:TD()},selC='';
 
-function item(t){const c=cat(t.c);return `<button class="it" data-id="${t.id}"><span class="ic" style="background:${col(t.c)}33">${c.e}</span><span class="tx"><b>${esc(c.n)}</b><small>${esc(t.n||'')}</small></span><b>${money(t.a)}</b></button>`}
+function item(t){const c=cat(t.c);return `<button class="it" data-id="${t.id}"><span class="ic" style="background:${col(t.c)}33">${c.e}</span><span class="tx"><b>${esc(c.n)}</b><small>${t.by?esc(t.by)+(t.n?' · ':''):''}${esc(t.n||'')}</small></span><b>${money(t.a)}</b></button>`}
 function home(){
   const [a,b]=mR(mon),l=inR(a,b).sort((x,y)=>y.d.localeCompare(x.d)||y.id-x.id),T=tot(l),td=tot(S.tx.filter(t=>t.d===TD()));
   let bud='';
@@ -105,6 +106,7 @@ function stats(){
   let h=`<div class="card" style="text-align:center"><svg viewBox="0 0 42 42" width="170" height="170"><circle r="15.9155" cx="21" cy="21" fill="none" stroke="var(--line)" stroke-width="6"/>${seg}</svg><div class="big">${money(T)}</div></div>`;
   h+=`<div class="kp"><div><small>المتوسط اليومي</small><b>${money(T/el)}</b></div><div><small>أعلى يوم</small><b>${ds.indexOf(mx)+1} ${MN[m-1]}</b><small>${money(mx)}</small></div><div><small>أكبر تصنيف</small><b>${cat(cs[0].id).e} ${esc(cat(cs[0].id).n)}</b></div><div><small>مقارنة بالشهر الماضي</small><b style="color:${df>0?'var(--bad)':'var(--acc)'}">${df===null?'—':(df>0?'▲ ':'▼ ')+Math.abs(df).toFixed(0)+'%'}</b></div></div>`;
   h+='<div class="card"><b>حسب التصنيف</b>'+cs.map(x=>{const c=cat(x.id),p=x.t/T*100;return `<div class="rw" style="margin-top:10px"><span>${c.e} ${esc(c.n)} <small>(${x.k})</small></span><span>${money(x.t)} · ${p.toFixed(0)}%</span></div><div class="bar"><i style="width:${p}%;background:${col(x.id)}"></i></div>`}).join('')+'</div>';
+  h+=people(l,T);
   h+=`<div class="card"><b>المصروف اليومي</b><div class="bars" style="margin-top:10px">${ds.map((v,i)=>`<i style="height:${v/mx*100}%" title="${i+1}: ${v}"></i>`).join('')}</div><div class="bl">${ds.map((v,i)=>`<span>${(i+1)%5==0||i==0?i+1:''}</span>`).join('')}</div></div>`;
   return h;
 }
@@ -119,12 +121,13 @@ function report(){
   h+=`<div class="card"><b>تقرير من ${a} إلى ${b}</b><div class="big">${money(T)}</div><small>${l.length} عملية · متوسط يومي ${money(T/days)} · متوسط العملية ${money(l.length?T/l.length:0)}</small></div>`;
   if(!l.length)return h+'<div class="card mut">لا توجد بيانات في هذه الفترة.</div>';
   h+='<div class="card"><b>ملخص التصنيفات</b><table class="tb"><tr><th>التصنيف</th><th>العدد</th><th>الإجمالي</th><th>%</th></tr>'+cs.map(x=>`<tr><td>${cat(x.id).e} ${esc(cat(x.id).n)}</td><td>${x.k}</td><td>${money(x.t)}</td><td>${(x.t/T*100).toFixed(0)}%</td></tr>`).join('')+'</table></div>';
+  h+=people(l,T);
   if(days>62){const mm={};l.forEach(t=>mm[t.d.slice(0,7)]=(mm[t.d.slice(0,7)]||0)+t.a);h+='<div class="card"><b>حسب الشهر</b><table class="tb">'+Object.keys(mm).sort().map(k=>`<tr><td>${mLabel(k)}</td><td>${money(mm[k])}</td></tr>`).join('')+'</table></div>'}
   h+='<div class="card"><b>أكبر 5 مصروفات</b><table class="tb">'+l.slice().sort((x,y)=>y.a-x.a).slice(0,5).map(t=>`<tr><td>${t.d}</td><td>${cat(t.c).e} ${esc(cat(t.c).n)}</td><td>${esc(t.n||'')}</td><td>${money(t.a)}</td></tr>`).join('')+'</table></div>';
   return h+'<div class="np rw"><button class="pri" data-a="print">طباعة / PDF</button><button data-a="csv">تصدير CSV</button><button data-a="share">مشاركة</button></div>';
 }
 function settings(){
-  return `<div class="card"><label>رمز العملة<input id="cu" value="${esc(S.cur)}"></label><label>ميزانية شهرية (اتركها 0 لو مش عايز ميزانية)<input id="bu" inputmode="decimal" value="${S.bud||''}"></label></div>
+  return `${shareCard()}<div class="card"><label>رمز العملة<input id="cu" value="${esc(S.cur)}"></label><label>ميزانية شهرية (اتركها 0 لو مش عايز ميزانية)<input id="bu" inputmode="decimal" value="${S.bud||''}"></label></div>
 <div class="card"><b>التصنيفات</b>${S.cats.map((c,i)=>`<div class="rw"><span>${c.e} ${esc(c.n)}</span><button class="dng" data-a="delcat" data-i="${i}">حذف</button></div>`).join('')}<div class="rw"><input id="ne" placeholder="😀" style="width:70px"><input id="nn" placeholder="اسم تصنيف جديد"><button class="pri" data-a="addcat">إضافة</button></div></div>
 <div class="card"><b>النسخ الاحتياطي</b><p><small>بياناتك محفوظة على جهازك فقط. لو مسحت بيانات المتصفح هتضيع، فاعمل نسخة احتياطية من وقت لآخر.</small></p><div class="rw"><button data-a="exp">تصدير نسخة</button><label class="btn">استيراد نسخة<input type="file" id="imp" accept=".json" hidden></label><button class="dng" data-a="reset">مسح كل البيانات</button></div></div>`;
 }
@@ -144,11 +147,11 @@ function sheet(id){
     if(e.target===$('#sh')||(b&&b.id==='no'))return closeS();
     if(!b)return;
     if(b.dataset.c){selC=b.dataset.c;document.querySelectorAll('.cg button').forEach(x=>x.classList.toggle('on',x===b));return}
-    if(b.id==='del'){if(confirm('حذف هذا المصروف؟')){S.tx=S.tx.filter(x=>x.id!==id);save();closeS();render()}return}
+    if(b.id==='del'){if(confirm('حذف هذا المصروف؟')){S.tx=S.tx.filter(x=>x.id!==id);save();rm(id);closeS();render()}return}
     if(b.id==='ok'){
       const a=num($('#fa').value);if(a<=0){$('#fa').focus();return}
-      const o={id:id||Date.now(),d:$('#fd').value||TD(),a,c:selC,n:$('#fn').value.trim()};
-      S.tx=id?S.tx.map(x=>x.id===id?o:x):S.tx.concat(o);S.last=selC;mon=o.d.slice(0,7);save();closeS();render();
+      const o={id:id||Date.now()*1000+Math.floor(Math.random()*1000),d:$('#fd').value||TD(),a,c:selC,n:$('#fn').value.trim(),by:(id&&t.by)||S.me||''};
+      S.tx=id?S.tx.map(x=>x.id===id?o:x):S.tx.concat(o);S.last=selC;mon=o.d.slice(0,7);save();put(o);closeS();render();
     }
   };
 }
@@ -159,27 +162,74 @@ $('#v').onclick=e=>{
     rep=d.p==='m'?{from:TD().slice(0,8)+'01',to:TD()}:d.p==='p'?{from:iso(new Date(y,m-1,1)),to:iso(new Date(y,m,0))}:d.p==='30'?{from:iso(new Date(Date.now()-29*864e5)),to:TD()}:{from:y+'-01-01',to:TD()};
     return render()}
   switch(d.a){
+    case 'cpcode':navigator.clipboard&&navigator.clipboard.writeText(S.sp).then(()=>alert('تم نسخ الكود'));break;
+    case 'leave':if(confirm('الخروج من المساحة؟ هتفضل نسخة من البيانات على جهازك.')){cloudStop();S.sp='';save();render()}break;
+    case 'join':{const me=$('#me').value.trim();if(!me)return $('#me').focus();let c=$('#sp').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');if(!c)c=newCode();S.me=me;S.sp=c;save();cloudStart(true);render();break}
     case 'print':window.print();break;
     case 'csv':{const q=s=>'"'+String(s).replace(/"/g,'""')+'"';dl('expenses.csv','\ufeff'+['التاريخ,التصنيف,المبلغ,ملاحظة'].concat(inR(rep.from,rep.to).sort((x,y)=>x.d.localeCompare(y.d)).map(t=>[t.d,q(cat(t.c).n),t.a,q(t.n||'')].join(','))).join('\n'),'text/csv');break}
     case 'share':{const x=repText();navigator.share?navigator.share({title:'تقرير المصاريف',text:x}).catch(()=>{}):navigator.clipboard.writeText(x).then(()=>alert('تم نسخ التقرير'));break}
     case 'exp':dl('expenses-backup-'+TD()+'.json',JSON.stringify(S),'application/json');break;
-    case 'reset':if(confirm('سيتم مسح كل المصروفات والتصنيفات. متأكد؟')){S=DEF();save();render()}break;
-    case 'delcat':if(confirm('حذف هذا التصنيف؟ المصروفات القديمة ستظهر كغير مصنفة.')){S.cats.splice(+d.i,1);save();render()}break;
-    case 'addcat':{const n=$('#nn').value.trim();if(!n)return $('#nn').focus();S.cats.push({id:'c'+Date.now(),n,e:$('#ne').value.trim()||'📌'});save();render()}
+    case 'reset':if(S.sp)return alert('اخرج من المساحة المشتركة أولاً حتى لا تُمسح بيانات الآخرين.');if(confirm('سيتم مسح كل المصروفات والتصنيفات. متأكد؟')){S=DEF();save();render()}break;
+    case 'delcat':if(confirm('حذف هذا التصنيف؟ المصروفات القديمة ستظهر كغير مصنفة.')){S.cats.splice(+d.i,1);save();meta();render()}break;
+    case 'addcat':{const n=$('#nn').value.trim();if(!n)return $('#nn').focus();S.cats.push({id:'c'+Date.now(),n,e:$('#ne').value.trim()||'📌'});save();meta();render()}
   }
 };
 $('#v').onchange=e=>{
   const i=e.target;
   if(i.id==='rf'||i.id==='rt'){rep={from:$('#rf').value||rep.from,to:$('#rt').value||rep.to};render()}
-  else if(i.id==='cu'){S.cur=i.value.trim()||'ج.م';save()}
-  else if(i.id==='bu'){S.bud=num(i.value);save()}
-  else if(i.id==='imp'&&i.files[0]){const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.tx)||!Array.isArray(j.cats))throw 0;if(confirm('استبدال البيانات الحالية بالنسخة المستوردة؟')){S=j;save();render()}}catch(_){alert('الملف غير صالح')}};r.readAsText(i.files[0])}
+  else if(i.id==='cu'){S.cur=i.value.trim()||'ج.م';save();meta()}
+  else if(i.id==='bu'){S.bud=num(i.value);save();meta()}
+  else if(i.id==='imp'&&i.files[0]){const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.tx)||!Array.isArray(j.cats))throw 0;if(S.sp)return alert('اخرج من المساحة المشتركة قبل الاستيراد.');if(confirm('استبدال البيانات الحالية بالنسخة المستوردة؟')){S=j;save();render()}}catch(_){alert('الملف غير صالح')}};r.readAsText(i.files[0])}
 };
 document.querySelectorAll('nav [data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render();scrollTo(0,0)});
 $('#add').onclick=()=>sheet();
 $('#pv').onclick=()=>{mon=shift(mon,-1);render()};
 $('#nx').onclick=()=>{mon=shift(mon,1);render()};
-render();
+
+/* ===== المشاركة السحابية (Firebase) ===== */
+let DB=null,unsub=[],cst='';
+const SDK=['app','auth','firestore'].map(x=>'https://www.gstatic.com/firebasejs/10.12.2/firebase-'+x+'-compat.js');
+const loadSDK=()=>SDK.reduce((p,u)=>p.then(()=>new Promise((r,j)=>{const e=document.createElement('script');e.src=u;e.onload=r;e.onerror=j;document.head.appendChild(e)})),Promise.resolve());
+const newCode=()=>Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>'abcdefghjkmnpqrstuvwxyz23456789'[b%31]).join('');
+const dref=()=>DB&&S.sp?DB.collection('spaces').doc(S.sp):null;
+const put=o=>{const r=dref();r&&r.collection('tx').doc(String(o.id)).set(o).catch(()=>{})};
+const rm=id=>{const r=dref();r&&r.collection('tx').doc(String(id)).delete().catch(()=>{})};
+const meta=()=>{const r=dref();r&&r.set({cats:S.cats,cur:S.cur,bud:S.bud||0}).catch(()=>{})};
+const setSt=t=>{cst=t;if(tab==='set')render()};
+function cloudStop(){unsub.forEach(f=>f());unsub=[];DB=null}
+async function cloudStart(first){
+  if(!S.sp||!window.FB_CONFIG||!FB_CONFIG.apiKey)return;
+  cloudStop();setSt('جاري الاتصال...');
+  try{
+    if(!window.firebase)await loadSDK();
+    if(!firebase.apps.length)firebase.initializeApp(FB_CONFIG);
+    const au=firebase.auth();
+    const u=await new Promise(r=>{const f=au.onAuthStateChanged(x=>{f();r(x)})});
+    if(!u)await au.signInAnonymously();
+    DB=firebase.firestore();
+    try{await DB.enablePersistence({synchronizeTabs:true})}catch(e){}
+    const ref=dref();
+    if(first){
+      if(S.tx.length&&confirm('عندك مصروفات على الجهاز. نرفعها للمساحة المشتركة؟ (لو رفضت، هتتبدل ببيانات المساحة)')){
+        for(let i=0;i<S.tx.length;i+=400){const b=DB.batch();S.tx.slice(i,i+400).forEach(t=>b.set(ref.collection('tx').doc(String(t.id)),Object.assign({by:S.me},t)));await b.commit()}
+      }
+      ref.get().then(d=>{if(!d.exists)meta()}).catch(()=>{});
+    }
+    unsub.push(ref.collection('tx').onSnapshot(s=>{S.tx=s.docs.map(d=>d.data());save();setSt(s.metadata.fromCache?'غير متصل حالياً، التغييرات هتتزامن لما الإنترنت يرجع':'متصل ومتزامن ✓');render()}));
+    unsub.push(ref.onSnapshot(d=>{const v=d.data();if(v&&v.cats){S.cats=v.cats;S.cur=v.cur||S.cur;S.bud=v.bud||0;save();render()}}));
+  }catch(e){setSt('تعذر الاتصال: '+((e&&e.message)||e))}
+}
+function shareCard(){
+  if(!window.FB_CONFIG||!FB_CONFIG.apiKey)return '<div class="card"><b>👨‍👩‍👧 المشاركة بين أكثر من شخص</b><p><small>لتفعيلها لازم تضيف إعدادات Firebase في ملف firebase-config.js.</small></p></div>';
+  if(S.sp)return `<div class="card"><b>👨‍👩‍👧 مساحة مشتركة</b><p><small>${esc(cst||'جاري الاتصال...')}</small></p><div class="rw"><span>اسمك: ${esc(S.me||'')}</span></div><div class="rw"><code style="direction:ltr;font-size:18px">${esc(S.sp)}</code><button data-a="cpcode">نسخ الكود</button></div><small>أعطِ الكود للشخص الآخر عشان يدخل نفس المساحة.</small><div class="rw" style="margin-top:8px"><button class="dng" data-a="leave">الخروج من المساحة</button></div></div>`;
+  return `<div class="card"><b>👨‍👩‍👧 المشاركة بين أكثر من شخص</b><p><small>اكتب اسمك. اترك الكود فاضي لإنشاء مساحة جديدة، أو اكتب كود مساحة موجودة للانضمام.</small></p><input id="me" placeholder="اسمك" value="${esc(S.me||'')}"><input id="sp" placeholder="كود المساحة (اختياري)" style="direction:ltr"><button class="pri" data-a="join">تفعيل المشاركة</button></div>`;
+}
+function people(l,T){
+  const m={};l.forEach(t=>{const k=t.by||'—';m[k]=(m[k]||0)+t.a});const k=Object.keys(m);
+  if(k.length<2)return '';
+  return '<div class="card"><b>حسب الشخص</b>'+k.sort((a,b)=>m[b]-m[a]).map(n=>`<div class="rw" style="margin-top:8px"><span>👤 ${esc(n)}</span><span>${money(m[n])} · ${(m[n]/T*100).toFixed(0)}%</span></div><div class="bar"><i style="width:${m[n]/T*100}%"></i></div>`).join('')+'</div>';
+}
+render();cloudStart();
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
